@@ -19,7 +19,7 @@ pygame.display.set_caption("Maze Game - Visual Edition")
 clock = pygame.time.Clock()
 
 # =========================
-# COLORES (MODERNO)
+# COLORES
 # =========================
 BG = (18, 18, 24)
 WALL = (35, 35, 45)
@@ -67,7 +67,7 @@ start_time = pygame.time.get_ticks()
 end_time = None
 
 # =========================
-# MOVIMIENTO
+# MOVEMENT
 # =========================
 def move(dx, dy):
     global player_x, player_y
@@ -79,7 +79,7 @@ def move(dx, dy):
             player_x, player_y = nx, ny
 
 # =========================
-# DRAW MEJORADO
+# DRAW IMPROVED
 # =========================
 def draw():
     screen.fill(BG)
@@ -102,7 +102,7 @@ def draw():
             pygame.draw.rect(screen, GRID, rect, 1)
 
     # =========================
-    # EXIT (PULSANTE)
+    # EXIT 
     # =========================
     pulse = (math.sin(pygame.time.get_ticks() * 0.005) + 1) * 0.5
     exit_size = int(CELL * (0.6 + pulse * 0.2))
@@ -118,7 +118,7 @@ def draw():
     px = player_x * CELL + CELL // 2
     py = player_y * CELL + CELL // 2
 
-    # glow externo
+    # glow 
     pygame.draw.circle(screen, (80, 200, 255, 50), (px, py), CELL // 2 + 8)
     pygame.draw.circle(screen, PLAYER, (px, py), CELL // 3)
 
