@@ -11,7 +11,7 @@ WIDTH, HEIGHT = 21, 21
 CELL = 28
 
 screen = pygame.display.set_mode((WIDTH * CELL, HEIGHT * CELL))
-pygame.display.set_caption("Maze Game - Pro Version")
+pygame.display.set_caption("Maze Game - Enemies")
 
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Arial", 22)
@@ -26,18 +26,20 @@ PATH = (235, 235, 245)
 GRID = (210, 210, 220)
 PLAYER = (80, 200, 255)
 EXIT = (0, 255, 140)
+ENEMY = (255, 80, 80)
 
 # =========================
-# GAME STATE
+# GAME STATES
 # =========================
 MENU = "MENU"
 PLAYING = "PLAYING"
 WIN = "WIN"
+LOSE = "LOSE"
 
 game_state = MENU
 
 # =========================
-# MAZE
+# MAZE GENERATION
 # =========================
 def new_maze():
     maze = [[1 for _ in range(WIDTH)] for _ in range(HEIGHT)]
@@ -64,22 +66,85 @@ def new_maze():
 
     return maze, create_exit()
 
+# =========================
+# VARIABLES
+# =========================
 maze, (exit_x, exit_y) = new_maze()
-
 player_x, player_y = 1, 1
+enemies = []
 
 start_time = 0
 end_time = 0
+
+# =========================
+# ENEMIES
+# =========================
+def spawn_enemies(n=3):
+    global enemies
+    enemies = []
+
+    for _ in range(n):
+        while True:
+            x = random.randint(1, WIDTH-2)
+            y = random.randint(1, HEIGHT-2)
+
+            if maze[y][x] == 0 and (x, y) != (player_x, player_y):
+                enemies.append([x, y])
+                break
+
+def move_enemies():
+    for enemy in enemies:
+        ex, ey = enemy
+
+        dx = player_x - ex
+        dy = player_y - ey
+
+        moves = []
+
+        if dx > 0: moves.append((1, 0))
+        if dx < 0: moves.append((-1, 0))
+        if dy > 0: moves.append((0, 1))
+        if dy < 0: moves.append((0, -1))
+
+        random.shuffle(moves)
+
+        moved = False
+
+        for mx, my in moves:
+            nx, ny = ex + mx, ey + my
+            if maze[ny][nx] == 0:
+                enemy[0], enemy[1] = nx, ny
+                moved = True
+                break
+
+        if not moved:
+            rand_moves = [(0,1),(0,-1),(1,0),(-1,0)]
+            random.shuffle(rand_moves)
+
+            for mx, my in rand_moves:
+                nx, ny = ex + mx, ey + my
+                if maze[ny][nx] == 0:
+                    enemy[0], enemy[1] = nx, ny
+                    break
+
+def check_collision():
+    for ex, ey in enemies:
+        if (ex, ey) == (player_x, player_y):
+            return True
+    return False
 
 # =========================
 # RESET
 # =========================
 def reset_game():
     global maze, exit_x, exit_y
-    global player_x, player_y, start_time, end_time, game_state
+    global player_x, player_y
+    global start_time, end_time, game_state
 
     maze, (exit_x, exit_y) = new_maze()
     player_x, player_y = 1, 1
+
+    spawn_enemies(3)
 
     start_time = pygame.time.get_ticks()
     end_time = 0
@@ -87,7 +152,7 @@ def reset_game():
     game_state = PLAYING
 
 # =========================
-# MOVE
+# MOVEMENT
 # =========================
 def move(dx, dy):
     global player_x, player_y
@@ -127,7 +192,7 @@ def draw_game():
 
             pygame.draw.rect(screen, GRID, rect, 1)
 
-    # exit pulse
+    # EXIT (pulse)
     pulse = (math.sin(pygame.time.get_ticks() * 0.005) + 1) * 0.5
     size = int(CELL * (0.6 + pulse * 0.2))
 
@@ -135,12 +200,18 @@ def draw_game():
     ey = exit_y * CELL + CELL // 2
     pygame.draw.circle(screen, EXIT, (ex, ey), size // 2)
 
-    # player
+    # PLAYER
     px = player_x * CELL + CELL // 2
     py = player_y * CELL + CELL // 2
     pygame.draw.circle(screen, PLAYER, (px, py), CELL // 3)
 
-    # timer
+    # ENEMIES
+    for ex, ey in enemies:
+        ex_pos = ex * CELL + CELL // 2
+        ey_pos = ey * CELL + CELL // 2
+        pygame.draw.circle(screen, ENEMY, (ex_pos, ey_pos), CELL // 3)
+
+    # TIMER
     elapsed = (pygame.time.get_ticks() - start_time) // 1000
     text = font.render(f"Time: {elapsed}s", True, (255, 255, 255))
     screen.blit(text, (10, 10))
@@ -157,12 +228,23 @@ def draw_win():
     screen.blit(restart, (WIDTH*CELL//2 - 120, HEIGHT*CELL//2))
 
 # =========================
-# LOOP
+# DRAW LOSE
+# =========================
+def draw_lose():
+    screen.fill(BG)
+    text = font.render("GAME OVER", True, ENEMY)
+    restart = font.render("Press R to Retry", True, (255, 255, 255))
+
+    screen.blit(text, (WIDTH*CELL//2 - 80, HEIGHT*CELL//2 - 30))
+    screen.blit(restart, (WIDTH*CELL//2 - 110, HEIGHT*CELL//2))
+
+# =========================
+# MAIN LOOP
 # =========================
 running = True
 
 while running:
-    clock.tick(60)
+    clock.tick(8)  # enemigos más lentos
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -184,24 +266,29 @@ while running:
                 if event.key == pygame.K_RIGHT:
                     move(1, 0)
 
-            elif game_state == WIN:
+            elif game_state in [WIN, LOSE]:
                 if event.key == pygame.K_r:
                     game_state = MENU
 
-    # WIN CONDITION
+    # GAME LOGIC
     if game_state == PLAYING:
+        move_enemies()
+
+        if check_collision():
+            game_state = LOSE
+
         if (player_x, player_y) == (exit_x, exit_y):
             game_state = WIN
 
-    # RENDER
+    # DRAW
     if game_state == MENU:
         draw_menu()
-
     elif game_state == PLAYING:
         draw_game()
-
     elif game_state == WIN:
         draw_win()
+    elif game_state == LOSE:
+        draw_lose()
 
     pygame.display.flip()
 
